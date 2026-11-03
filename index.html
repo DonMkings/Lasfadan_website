@@ -350,14 +350,13 @@
   </section>
 </section>
 
-</main>
-
-<section id="branch-directory" aria-labelledby="branch-directory-title" style="width:min(92%,70rem);margin:2rem auto">
+<section class="page" data-page="branches" id="branch-directory" aria-labelledby="branch-directory-title" style="width:min(92%,70rem);margin:2rem auto">
   <h2 id="branch-directory-title">Lasfadan Branch Directory</h2>
   <p id="branch-directory-status" role="status">Loading branches…</p>
   <ul id="branch-directory-list"></ul>
   <noscript>Enable JavaScript to view published branches.</noscript>
 </section>
+</main>
 <script>
 (async () => {
   const status = document.getElementById('branch-directory-status');
@@ -450,6 +449,7 @@ const SITE_CONTENT = {
     {id:'home', label:'Home'},
     {id:'about', label:'About'},
     {id:'whatwedo', label:'What We Do'},
+    {id:'branches', label:'Branches'},
     {id:'events', label:'Events'},
     {id:'gallery', label:'Gallery'},
     {id:'news', label:'News'},
