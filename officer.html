@@ -8,7 +8,7 @@
 <form id="recovery" hidden><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><button>Set password</button></form>
 <button id="logout" hidden>Sign out</button>
 <form id="editor" hidden><label>Branch<select id="branch"></select></label>
-<label>Name<input name="name" required></label><label>Local government area<input name="lga" required></label><label>Description<textarea name="description"></textarea></label><label>Approved public contact<input name="public_contact"></label><label><input name="published" type="checkbox"> Published</label><button>Save branch</button></form>
+<label>Name<input name="name" required></label><label>Local government area<input name="lga" required></label><label>Description<textarea name="description"></textarea></label><label>Approved public contact<input name="public_contact"></label><label>Branch visibility<select name="published"><option value="false">Unpublished (private draft)</option><option value="true">Published (public)</option></select></label><button>Save branch</button></form>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script>
@@ -23,7 +23,7 @@ function fill() {
   for (const field of ['name','lga','description','public_contact']) {
     editor.elements[field].value = row?.[field] ?? '';
   }
-  editor.elements.published.checked = row?.published ?? false;
+  editor.elements.published.value = String(row?.published ?? false);
 }
 async function load(selected = '') {
   const {data,error} = await branches().select('id,name,lga,description,public_contact,published').order('name');
@@ -86,7 +86,11 @@ editor.onsubmit = action(async () => {
   for (const field of ['name','lga','description','public_contact']) {
     record[field] = editor.elements[field].value.trim();
   }
-  record.published = editor.elements.published.checked;
+  record.published = editor.elements.published.value === 'true';
+  const previous = rows.find(row => row.id === id)?.published ?? false;
+  if (record.published !== previous && !confirm(record.published
+    ? 'Publish this branch so visitors can see it?'
+    : 'Unpublish this branch and return it to draft?')) return;
   const query = id ? branches().update(record).eq('id',id) : branches().insert(record);
   const {data,error} = await query.select('id').single();
   if (error) throw error;
