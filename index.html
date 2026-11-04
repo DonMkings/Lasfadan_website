@@ -214,41 +214,7 @@
       </div>
       <div id="eventsFullList" class="reveal"></div>
 
-      <div class="admin-strip reveal">
-        <button class="admin-link" id="manageEventsBtn">manage events</button>
-        <div class="admin-panel" id="adminPanel" style="display:none;">
-          <h4 id="adminFormTitle">Add a new event</h4>
-          <div class="form-grid">
-            <div class="field full">
-              <label>Title</label>
-              <input type="text" id="fTitle" placeholder="Event title">
-            </div>
-            <div class="field">
-              <label>Date</label>
-              <input type="date" id="fDate">
-            </div>
-            <div class="field">
-              <label>Time</label>
-              <input type="text" id="fTime" placeholder="e.g. 10:00 AM">
-            </div>
-            <div class="field full">
-              <label>Location</label>
-              <input type="text" id="fLocation" placeholder="Venue, area">
-            </div>
-            <div class="field full">
-              <label>Description</label>
-              <textarea id="fDescription" placeholder="What members should know"></textarea>
-            </div>
-          </div>
-          <div class="admin-form-actions">
-            <button class="btn btn-gold" id="saveEventBtn">Save event</button>
-            <button class="btn btn-ghost-light" id="cancelEditBtn" style="display:none;">Cancel edit</button>
-            <button class="admin-link" id="lockAdminBtn" style="margin-left:auto;">Lock admin</button>
-          </div>
-          <p class="admin-status" id="adminStatus"></p>
-          <p class="admin-note">Passcode-protected on this device only — good for keeping casual visitors out, not a substitute for real security. Change the passcode in the code before sharing this site with your admins.</p>
-        </div>
-      </div>
+
     </div>
   </section>
 </section>
@@ -350,8 +316,45 @@
   </section>
 </section>
 
+<section class="page" data-page="branches" id="branch-directory" aria-labelledby="branch-directory-title" style="width:min(92%,70rem);margin:2rem auto">
+  <h2 id="branch-directory-title">Branch Directory</h2>
+  <p id="branch-directory-status" role="status">Loading branches…</p>
+  <ul id="branch-directory-list"></ul>
+  <noscript>Enable JavaScript to view published branches.</noscript>
+</section>
 </main>
-
+<script>
+(async () => {
+  const status = document.getElementById('branch-directory-status');
+  const list = document.getElementById('branch-directory-list');
+  try {
+    const response = await fetch(
+      'https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_branches?select=name,lga,description,public_contact&published=eq.true&order=lga.asc,name.asc',
+      { headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' }, cache: 'no-store' }
+    );
+    if (!response.ok) throw new Error('Directory request failed');
+    const branches = await response.json();
+    for (const branch of branches) {
+      const item = document.createElement('li');
+      const profile = document.createElement('details');
+      const title = document.createElement('summary');
+      title.textContent = branch.name + ' — ' + branch.lga;
+      profile.append(title);
+      for (const value of [branch.description, branch.public_contact]) {
+        if (!value) continue;
+        const paragraph = document.createElement('p');
+        paragraph.textContent = value;
+        profile.append(paragraph);
+      }
+      item.append(profile);
+      list.append(item);
+    }
+    status.textContent = branches.length ? '' : 'No branches have been published yet.';
+  } catch {
+    status.textContent = 'The branch directory is temporarily unavailable. Please try again later.';
+  }
+})();
+</script>
 <footer class="footer">
   <div class="wrap">
     <div class="footer-top">
@@ -386,7 +389,7 @@
 
 <div class="modal-overlay" id="passcodeOverlay">
   <div class="modal-box">
-    <h4>Manage events</h4>
+    <h4>Manage gallery</h4>
     <div class="passcode-box">
       <label style="display:block;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:8px;">Enter admin passcode</label>
       <input type="password" id="passcodeInput" placeholder="Passcode">
@@ -412,6 +415,7 @@ const SITE_CONTENT = {
     {id:'home', label:'Home'},
     {id:'about', label:'About'},
     {id:'whatwedo', label:'What We Do'},
+    {id:'branches', label:'Branch Directory'},
     {id:'events', label:'Events'},
     {id:'gallery', label:'Gallery'},
     {id:'news', label:'News'},
@@ -464,7 +468,6 @@ const SITE_CONTENT = {
 
 /* Change this before sharing the live site with your admins. */
 const ADMIN_PASSCODE = 'lastfadan2026';
-const EVENTS_KEY = 'lastfadan:events';
 const GALLERY_KEY = 'lastfadan:gallery';
 const EMAILJS_CONFIG = {
   publicKey: 'Nb8-XilFV2ms3iO8_',
@@ -472,7 +475,6 @@ const EMAILJS_CONFIG = {
   templateId: 'ekundayoojo74@gmail.com'
 };
 let isAdmin = false;
-let pendingAdminTarget = 'events';
 let eventsCache = [];
 let galleryCache = [];
 
@@ -651,8 +653,7 @@ document.getElementById('galleryViewAll').addEventListener('click', ()=>goTo('ga
 document.getElementById('newsViewAll').addEventListener('click', ()=>goTo('news'));
 
 /* =========================================================
-   EVENTS — persisted with window.storage (shared across
-   everyone who opens this site, no backend required)
+   EVENTS — published records read from Supabase; storage helpers below serve the gallery
    ========================================================= */
 function fmtDate(iso){
   const d = new Date(iso + 'T00:00:00');
@@ -691,40 +692,39 @@ function writeStoredJSON(key, value){
 }
 
 async function loadEvents(){
-  const listEls = [document.getElementById('eventsPreviewList'), document.getElementById('eventsFullList')];
-  listEls.forEach(el=>{ if(el) el.innerHTML = '<p class="events-loading">Loading events\u2026</p>'; });
-  try{
-    const stored = await readStoredJSON(EVENTS_KEY, SITE_CONTENT.seedEvents.slice());
-    eventsCache = Array.isArray(stored) ? stored : SITE_CONTENT.seedEvents.slice();
-    if(!stored || !Array.isArray(stored)){
-      await writeStoredJSON(EVENTS_KEY, eventsCache);
-    }
-  }catch(e){
-    eventsCache = SITE_CONTENT.seedEvents.slice();
+  const lists = ['eventsPreviewList', 'eventsFullList'].map(id => document.getElementById(id)).filter(Boolean);
+  lists.forEach(el => el.innerHTML = '<p class="events-loading">Loading events…</p>');
+  try {
+    const response = await fetch(
+      'https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_events?select=id,title,date,time,location,description&published=eq.true&order=date.asc',
+      {headers: {apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc'}, cache: 'no-store'}
+    );
+    if (!response.ok) throw new Error('Events request failed: ' + response.status);
+    const data = await response.json();
+    if (!Array.isArray(data)) throw new Error('Unexpected events response');
+    eventsCache = data;
+    renderEvents();
+  } catch(error) {
+    console.error('Unable to load events:', error);
+    eventsCache = [];
+    lists.forEach(el => el.innerHTML = '<p class="events-empty">Unable to load events. Please try again later.</p>');
   }
-  renderEvents();
 }
 
-async function persistEvents(){
-  return writeStoredJSON(EVENTS_KEY, eventsCache);
+function escapeEventText(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 }
 
-function eventRowHTML(ev, showActions){
+function eventRowHTML(ev){
   const {day, mon} = fmtDate(ev.date);
-  const actions = showActions ? `
-    <div class="event-actions">
-      <button data-edit="${ev.id}">Edit</button>
-      <button data-delete="${ev.id}">Delete</button>
-    </div>` : '';
   return `
     <div class="event-row">
       <div class="event-date"><span class="day">${day}</span><span class="mon">${mon}</span></div>
       <div class="event-body">
-        <h3>${ev.title}</h3>
-        <div class="event-meta">${ev.time} &middot; ${ev.location}</div>
-        <p class="event-desc">${ev.description}</p>
+        <h3>${escapeEventText(ev.title)}</h3>
+        <div class="event-meta">${escapeEventText(ev.time)} &middot; ${escapeEventText(ev.location)}</div>
+        <p class="event-desc">${escapeEventText(ev.description)}</p>
       </div>
-      ${actions}
     </div>`;
 }
 
@@ -737,7 +737,7 @@ function renderEvents(){
   const previewEl = document.getElementById('eventsPreviewList');
   if(previewEl){
     previewEl.innerHTML = upcoming.length
-      ? upcoming.slice(0,3).map(e=>eventRowHTML(e,false)).join('')
+      ? upcoming.slice(0,3).map(e=>eventRowHTML(e)).join('')
       : '<p class="events-empty">No upcoming events right now \u2014 check back soon.</p>';
   }
 
@@ -745,15 +745,13 @@ function renderEvents(){
   if(fullEl){
     let html = '';
     html += upcoming.length
-      ? upcoming.map(e=>eventRowHTML(e,isAdmin)).join('')
+      ? upcoming.map(e=>eventRowHTML(e)).join('')
       : '<p class="events-empty">No upcoming events right now \u2014 check back soon.</p>';
     if(past.length){
       html += `<div style="margin-top:36px;"><span class="eyebrow">Past Events</span></div>`;
-      html += past.slice().reverse().map(e=>eventRowHTML(e,isAdmin)).join('');
+      html += past.slice().reverse().map(e=>eventRowHTML(e)).join('');
     }
     fullEl.innerHTML = html;
-    fullEl.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=>startEdit(b.dataset.edit)));
-    fullEl.querySelectorAll('[data-delete]').forEach(b=> b.addEventListener('click', ()=>deleteEvent(b.dataset.delete)));
   }
 }
 
@@ -761,19 +759,9 @@ function renderEvents(){
 const passOverlay = document.getElementById('passcodeOverlay');
 const passInput = document.getElementById('passcodeInput');
 const passError = document.getElementById('passcodeError');
-const adminPanel = document.getElementById('adminPanel');
 const galleryAdminPanel = document.getElementById('galleryAdminPanel');
 
-document.getElementById('manageEventsBtn').addEventListener('click', ()=>{
-  pendingAdminTarget = 'events';
-  if(isAdmin){ adminPanel.style.display = 'block'; return; }
-  passError.style.display = 'none';
-  passInput.value = '';
-  passOverlay.classList.add('open');
-  passInput.focus();
-});
 document.getElementById('manageGalleryBtn').addEventListener('click', ()=>{
-  pendingAdminTarget = 'gallery';
   if(isAdmin){ galleryAdminPanel.style.display = 'block'; return; }
   passError.style.display = 'none';
   passInput.value = '';
@@ -787,47 +775,17 @@ function tryUnlock(){
   if(passInput.value === ADMIN_PASSCODE){
     isAdmin = true;
     passOverlay.classList.remove('open');
-    if(pendingAdminTarget === 'gallery'){
-      galleryAdminPanel.style.display = 'block';
-    } else {
-      adminPanel.style.display = 'block';
-    }
-    renderEvents();
+    galleryAdminPanel.style.display = 'block';
     renderGallery();
   } else {
     passError.style.display = 'block';
   }
 }
-document.getElementById('lockAdminBtn').addEventListener('click', ()=>{
-  isAdmin = false;
-  adminPanel.style.display = 'none';
-  galleryAdminPanel.style.display = 'none';
-  clearForm();
-  clearGalleryForm();
-  renderEvents();
-  renderGallery();
-});
-
-/* ---------- Admin: add / edit / delete ---------- */
-let editingId = null;
+/* ---------- Gallery management ---------- */
 let editingGalleryId = null;
-const adminStatus = document.getElementById('adminStatus');
 const galleryStatus = document.getElementById('galleryStatus');
-const fTitle = document.getElementById('fTitle');
-const fDate = document.getElementById('fDate');
-const fTime = document.getElementById('fTime');
-const fLocation = document.getElementById('fLocation');
-const fDescription = document.getElementById('fDescription');
 const gTitle = document.getElementById('gTitle');
 const gSrc = document.getElementById('gSrc');
-
-function clearForm(){
-  editingId = null;
-  fTitle.value=''; fDate.value=''; fTime.value=''; fLocation.value=''; fDescription.value='';
-  document.getElementById('adminFormTitle').textContent = 'Add a new event';
-  document.getElementById('cancelEditBtn').style.display = 'none';
-  adminStatus.textContent = '';
-}
 
 function clearGalleryForm(){
   editingGalleryId = null;
@@ -835,51 +793,6 @@ function clearGalleryForm(){
   document.getElementById('galleryFormTitle').textContent = 'Add a gallery image';
   document.getElementById('cancelGalleryEditBtn').style.display = 'none';
   galleryStatus.textContent = '';
-}
-
-function startEdit(id){
-  const ev = eventsCache.find(e=>e.id===id);
-  if(!ev) return;
-  editingId = id;
-  fTitle.value = ev.title; fDate.value = ev.date; fTime.value = ev.time;
-  fLocation.value = ev.location; fDescription.value = ev.description;
-  document.getElementById('adminFormTitle').textContent = 'Edit event';
-  document.getElementById('cancelEditBtn').style.display = 'inline-flex';
-  adminPanel.scrollIntoView({behavior:'smooth', block:'center'});
-}
-document.getElementById('cancelEditBtn').addEventListener('click', clearForm);
-
-document.getElementById('saveEventBtn').addEventListener('click', async ()=>{
-  if(!fTitle.value || !fDate.value){
-    adminStatus.textContent = 'Add at least a title and date.';
-    adminStatus.style.color = '#7c2027';
-    return;
-  }
-  adminStatus.style.color = 'var(--gold-deep)';
-  adminStatus.textContent = 'Saving\u2026';
-
-  if(editingId){
-    const idx = eventsCache.findIndex(e=>e.id===editingId);
-    if(idx > -1){
-      eventsCache[idx] = {...eventsCache[idx], title:fTitle.value, date:fDate.value, time:fTime.value, location:fLocation.value, description:fDescription.value};
-    }
-  } else {
-    eventsCache.push({
-      id: 'e' + Date.now(),
-      title: fTitle.value, date: fDate.value, time: fTime.value || 'Time TBA',
-      location: fLocation.value || 'Location TBA', description: fDescription.value || ''
-    });
-  }
-  const ok = await persistEvents();
-  adminStatus.textContent = ok ? 'Saved.' : "Couldn't save just now \u2014 your change is visible here but may not persist. Try again.";
-  clearForm();
-  renderEvents();
-});
-
-async function deleteEvent(id){
-  eventsCache = eventsCache.filter(e=>e.id!==id);
-  await persistEvents();
-  renderEvents();
 }
 
 function startGalleryEdit(id){
