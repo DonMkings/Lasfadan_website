@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lasfadan Officer Dashboard</title>
+<style>body{font:1rem system-ui;max-width:44rem;margin:3rem auto;padding:0 1rem;color:#172820}label{display:block;margin:.8rem 0}input:not([type=checkbox]),textarea,select{display:block;width:100%;box-sizing:border-box;padding:.6rem}button{padding:.6rem;margin:.25rem}fieldset{margin:1rem 0}</style>
+<main><a href="./">Lasfadan home</a><h1>Officer dashboard</h1>
+<p id="status" role="status">Loading…</p>
+<form id="login" hidden><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password"></label><button>Sign in</button><button type="button" id="reset">Send password reset</button></form>
+<form id="recovery" hidden><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><button>Set password</button></form>
+<button id="logout" hidden>Sign out</button>
+<form id="editor" hidden><label>Branch<select id="branch"></select></label>
+<label>Name<input name="name" required></label><label>Local government area<input name="lga" required></label><label>Description<textarea name="description"></textarea></label><label>Approved public contact<input name="public_contact"></label><label>Branch visibility<select name="published"><option value="false">Unpublished (private draft)</option><option value="true">Published (public)</option></select></label><button>Save branch</button></form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const login = $('login'), recovery = $('recovery'), editor = $('editor');
+const status = message => { $('status').textContent = message; };
+const db = supabase.createClient('https://qardzqrsjfwfsmueuctg.supabase.co','sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc');
+const branches = () => db.from('lasfadan_branches');
+let rows = [], recovering = new URLSearchParams(location.hash.slice(1)).get('type') === 'recovery';
+function fill() {
+  const row = rows.find(row => row.id === $('branch').value);
+  for (const field of ['name','lga','description','public_contact']) {
+    editor.elements[field].value = row?.[field] ?? '';
+  }
+  editor.elements.published.value = String(row?.published ?? false);
+}
+async function load(selected = '') {
+  const {data,error} = await branches().select('id,name,lga,description,public_contact,published').order('name');
+  if (error) throw error;
+  rows = data;
+  $('branch').replaceChildren(new Option('New branch',''), ...rows.map(row => new Option(row.name + (row.published ? '' : ' (draft)'),row.id)));
+  $('branch').value = selected;
+  fill();
+}
+async function render(session) {
+  editor.hidden = true;
+  login.hidden = !!session;
+  recovery.hidden = !session || !recovering;
+  $('logout').hidden = !session;
+  if (!session) return status('Sign in with your invited officer account.');
+  if (recovering) return status('Choose a new password.');
+  const {data,error} = await db.from('lasfadan_officers').select('user_id').eq('user_id',session.user.id).maybeSingle();
+  if (error) throw error;
+  if (!data) return status('This account has no officer access.');
+  await load();
+  editor.hidden = false;
+  status('Choose a branch to edit or create a new one.');
+}
+function action(handler) {
+  return async event => {
+    event.preventDefault();
+    const button = event.submitter || event.currentTarget;
+    button.disabled = true;
+    try { await handler(); } catch (error) { status(error.message); }
+    finally { button.disabled = false; }
+  };
+}
+login.onsubmit = action(async () => {
+  const {error} = await db.auth.signInWithPassword({email:login.elements.email.value,password:login.elements.password.value});
+  if (error) throw error;
+  login.elements.password.value = '';
+});
+$('reset').onclick = action(async () => {
+  if (!login.elements.email.reportValidity()) return;
+  const {error} = await db.auth.resetPasswordForEmail(login.elements.email.value,{redirectTo:location.origin + location.pathname});
+  if (error) throw error;
+  status('Check your inbox for the password reset link.');
+});
+recovery.onsubmit = action(async () => {
+  const {data,error} = await db.auth.updateUser({password:recovery.elements.password.value});
+  if (error) throw error;
+  recovering = false;
+  recovery.reset();
+  await render({user:data.user});
+});
+$('logout').onclick = action(async () => {
+  const {error} = await db.auth.signOut();
+  if (error) throw error;
+  recovering = false;
+});
+$('branch').onchange = fill;
+editor.onsubmit = action(async () => {
+  const id = $('branch').value;
+  const record = {};
+  for (const field of ['name','lga','description','public_contact']) {
+    record[field] = editor.elements[field].value.trim();
+  }
+  record.published = editor.elements.published.value === 'true';
+  const previous = rows.find(row => row.id === id)?.published ?? false;
+  if (record.published !== previous && !confirm(record.published
+    ? 'Publish this branch so visitors can see it?'
+    : 'Unpublish this branch and return it to draft?')) return;
+  const query = id ? branches().update(record).eq('id',id) : branches().insert(record);
+  const {data,error} = await query.select('id').single();
+  if (error) throw error;
+  await load(data.id);
+  status(record.published ? 'Published branch saved.' : 'Draft saved.');
+});
+db.auth.onAuthStateChange((event,session) => {
+  if (event === 'PASSWORD_RECOVERY') recovering = true;
+  if (['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT','PASSWORD_RECOVERY'].includes(event)) {
+    setTimeout(() => render(session).catch(error => status(error.message)),0);
+  }
+});
+</script></html>
