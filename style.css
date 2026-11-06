@@ -332,3 +332,6 @@
 
   .sample-flag{display:inline-block;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-deep);border:1px solid var(--line-on-light);padding:4px 10px;margin-bottom:18px;}
   .block--ink .sample-flag{color:var(--gold-2);border-color:var(--line-on-dark);}
+  /* Give photos more room on the full Gallery page. */
+  @media (min-width:981px){#galleryGridFull{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media (max-width:520px){#galleryGridFull{grid-template-columns:minmax(0,1fr);}}
