@@ -276,8 +276,8 @@
       <div class="section-head reveal">
         <span class="eyebrow">Executives</span>
         <h2>Leading the association</h2>
-        <p>Sample layout — add your current executives' names and photos here.</p>
       </div>
+      <p id="executivesStatus" role="status">Loading executive profiles…</p>
       <div class="exec-grid reveal" id="execGrid"></div>
     </div>
   </section>
@@ -577,13 +577,53 @@ function newsCard(n){
 document.getElementById('newsGridHome').innerHTML = SITE_CONTENT.news.map(newsCard).join('');
 document.getElementById('newsGridFull').innerHTML = SITE_CONTENT.news.map(newsCard).join('');
 
-document.getElementById('execGrid').innerHTML = SITE_CONTENT.executives.map(ex=>`
-  <div class="exec-card">
-    <div class="exec-ring">photo</div>
-    <h3>Add Name</h3>
-    <div class="role">${ex.role}</div>
-  </div>
-`).join('');
+async function loadExecutives(){
+  const grid = document.getElementById('execGrid');
+  const status = document.getElementById('executivesStatus');
+  const projectUrl = 'https://qardzqrsjfwfsmueuctg.supabase.co';
+  try {
+    const response = await fetch(
+      projectUrl + '/rest/v1/lasfadan_executives?select=name,office,title,photo_path&published=eq.true&order=display_order.asc,name.asc,id.asc',
+      { headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' }, cache: 'no-store' }
+    );
+    if (!response.ok) throw new Error('Executives request failed: ' + response.status);
+    const executives = await response.json();
+    if (!Array.isArray(executives)) throw new Error('Unexpected executives response');
+    for (const executive of executives) {
+      const card = document.createElement('div');
+      card.className = 'exec-card';
+      const ring = document.createElement('div');
+      ring.className = 'exec-ring';
+      const photoPath = executive.photo_path?.trim();
+      const segments = photoPath ? photoPath.split('/') : [];
+      if (segments.length && segments.every(part => part && part !== '.' && part !== '..' && !part.includes('\\'))) {
+        const photo = document.createElement('img');
+        photo.src = projectUrl + '/storage/v1/object/public/lasfadan-executive-photos/' +
+          segments.map(encodeURIComponent).join('/');
+        photo.alt = '';
+        photo.loading = 'lazy';
+        photo.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+        photo.addEventListener('error', () => { ring.textContent = 'Photo'; }, { once: true });
+        ring.append(photo);
+      } else {
+        ring.textContent = 'Photo';
+      }
+      const name = document.createElement('h3');
+      name.textContent = executive.name;
+      const role = document.createElement('div');
+      role.className = 'role';
+      role.textContent = [executive.office, executive.title].filter(Boolean).join(' · ');
+      card.append(ring, name, role);
+      grid.append(card);
+    }
+    status.textContent = executives.length ? '' : 'No executive profiles have been published yet.';
+    status.hidden = executives.length > 0;
+  } catch (error) {
+    console.error('Unable to load executives:', error);
+    status.textContent = 'Unable to load executive profiles. Please try again later.';
+  }
+}
+loadExecutives();
 
 async function loadGallery(){
   try{
