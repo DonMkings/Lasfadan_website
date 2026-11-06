@@ -526,7 +526,7 @@ async function loadNews(){
   grids.forEach(grid => { grid.textContent = 'Loading news…'; });
   try {
     const response = await fetch(
-      'https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_news?select=tag,title,body&published=eq.true&order=display_order.asc,id.asc',
+      'https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_news?select=tag,title,body,photo_path&published=eq.true&order=display_order.asc,id.asc',
       { headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' }, cache: 'no-store' }
     );
     if (!response.ok) throw new Error('News request failed: ' + response.status);
@@ -544,6 +544,17 @@ async function loadNews(){
         title.textContent = article.title;
         const body = document.createElement('p');
         body.textContent = article.body;
+        const path = article.photo_path?.trim().split('/');
+        if (path?.length && path.every(part => part && part !== '.' && part !== '..' && !part.includes('\\'))) {
+          const photo = document.createElement('img');
+          photo.className = 'news-photo';
+          photo.alt = '';
+          photo.loading = 'lazy';
+          photo.src = 'https://qardzqrsjfwfsmueuctg.supabase.co/storage/v1/object/public/lasfadan-news-photos/' +
+            path.map(encodeURIComponent).join('/');
+          photo.addEventListener('error', () => photo.remove(), { once: true });
+          card.append(photo);
+        }
         card.append(tag, title, body);
         grid.append(card);
       }
