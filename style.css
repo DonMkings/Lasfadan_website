@@ -275,12 +275,12 @@
   @media (max-width:760px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
 
   /* ---------- News ---------- */
-  .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-on-light);border:1px solid var(--line-on-light);}
+  .news-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line-on-light);border:1px solid var(--line-on-light);}
   .news-card{background:var(--bone);padding:30px 26px;}
   .news-card .eyebrow{margin-bottom:14px;}
   .news-card h3{font-size:18px;margin-bottom:12px;}
   .news-card p{font-size:14px;opacity:0.75;}
-  @media (max-width:900px){.news-grid{grid-template-columns:1fr;}}
+  @media (max-width:640px){.news-grid{grid-template-columns:1fr;}}
 
   /* ---------- Executives ---------- */
   .exec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:36px 26px;}
@@ -335,3 +335,5 @@
   /* Give photos more room on the full Gallery page. */
   @media (min-width:981px){#galleryGridFull{grid-template-columns:repeat(3,minmax(0,1fr));}}
   @media (max-width:520px){#galleryGridFull{grid-template-columns:minmax(0,1fr);}}
+
+  .news-photo{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:16px;}
