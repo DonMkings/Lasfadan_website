@@ -226,32 +226,10 @@
       <div class="section-head reveal">
         <span class="eyebrow">Gallery</span>
         <h2>Moments from the guild</h2>
-        <p>These tiles are placeholders — swap in real photos from your workshops and shows whenever you're ready.</p>
       </div>
       <div class="gallery-grid reveal" id="galleryGridFull"></div>
 
-      <div class="admin-strip reveal">
-        <button class="admin-link" id="manageGalleryBtn"></button>
-        <div class="admin-panel gallery-admin-panel" id="galleryAdminPanel" style="display:none;">
-          <h4 id="galleryFormTitle">Add a gallery image</h4>
-          <div class="form-grid">
-            <div class="field full">
-              <label>Image title</label>
-              <input type="text" id="gTitle" placeholder="e.g. Mr president">
-            </div>
-            <div class="field full">
-              <label>Image URL or path</label>
-              <input type="text" id="gSrc" placeholder="image/your-photo.png">
-            </div>
-          </div>
-          <div class="admin-form-actions">
-            <button class="btn btn-gold" id="saveGalleryBtn">Save image</button>
-            <button class="btn btn-ghost-light" id="cancelGalleryEditBtn" style="display:none;">Cancel edit</button>
-          </div>
-          <p class="admin-status" id="galleryStatus"></p>
-          <p class="admin-note">Use a photo path or URL here. New images can be added from the page without changing any code.</p>
-        </div>
-      </div>
+
     </div>
   </section>
 </section>
@@ -387,21 +365,6 @@
   </div>
 </footer>
 
-<div class="modal-overlay" id="passcodeOverlay">
-  <div class="modal-box">
-    <h4>Manage gallery</h4>
-    <div class="passcode-box">
-      <label style="display:block;font-size:11.5px;letter-spacing:0.05em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:8px;">Enter admin passcode</label>
-      <input type="password" id="passcodeInput" placeholder="Passcode">
-      <p id="passcodeError" style="font-size:12.5px;color:#7c2027;display:none;">That passcode isn't right. Try again.</p>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-gold" id="passcodeSubmit" style="flex:1;justify-content:center;">Unlock</button>
-      <button class="btn btn-ghost-light" id="passcodeCancel" style="flex:1;justify-content:center;">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -456,9 +419,6 @@ const SITE_CONTENT = {
     email:'ekundayoojo74@gmail.com',
     hours:'Monday \u2013 Friday, 9am \u2013 5pm'
   },
-  seedGallery:[
-    {id:'g1', title:'Mr president', src:'image/Mr presdient.png'}
-  ],
   seedEvents:[
     {id:'e1', title:'Annual General Meeting', date:'2026-08-23', time:'10:00 AM', location:'LASTFADAN Secretariat, Ikeja', description:'Members gather to review the year, elect officers, and set the agenda ahead.'},
     {id:'e2', title:'Lagos Runway Showcase', date:'2026-09-12', time:'4:00 PM', location:'Eko Convention Centre, Victoria Island', description:'A showcase of new collections from member designers, open to press and buyers.'},
@@ -466,17 +426,12 @@ const SITE_CONTENT = {
   ]
 };
 
-/* Change this before sharing the live site with your admins. */
-const ADMIN_PASSCODE = 'lastfadan2026';
-const GALLERY_KEY = 'lastfadan:gallery';
 const EMAILJS_CONFIG = {
   publicKey: 'Nb8-XilFV2ms3iO8_',
   serviceId: 'service_Lastfadan',
   templateId: 'ekundayoojo74@gmail.com'
 };
-let isAdmin = false;
 let eventsCache = [];
-let galleryCache = [];
 
 /* ---------- Icons ---------- */
 const ICONS = {
@@ -626,53 +581,42 @@ async function loadExecutives(){
 loadExecutives();
 
 async function loadGallery(){
-  try{
-    const stored = await readStoredJSON(GALLERY_KEY, SITE_CONTENT.seedGallery.slice());
-    galleryCache = Array.isArray(stored) ? stored : SITE_CONTENT.seedGallery.slice();
-    if(!stored || !Array.isArray(stored)){
-      await writeStoredJSON(GALLERY_KEY, galleryCache);
+  const home = document.getElementById('galleryGridHome');
+  const full = document.getElementById('galleryGridFull');
+  home.textContent = full.textContent = 'Loading gallery…';
+  try {
+    const projectUrl = 'https://qardzqrsjfwfsmueuctg.supabase.co';
+    const response = await fetch(
+      projectUrl + '/rest/v1/lasfadan_gallery?select=caption,photo_path&published=eq.true&order=display_order.asc,id.asc',
+      { headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' }, cache: 'no-store' }
+    );
+    if (!response.ok) throw new Error('Gallery request failed: ' + response.status);
+    const photos = await response.json();
+    if (!Array.isArray(photos)) throw new Error('Unexpected gallery response');
+
+    const tiles = [];
+    for (const photo of photos) {
+      const parts = photo.photo_path.split('/');
+      if (parts.some(part => !part || part === '.' || part === '..' || part.includes('\\'))) continue;
+      const tile = document.createElement('div');
+      tile.className = 'g-tile';
+      const image = document.createElement('img');
+      image.alt = photo.caption;
+      image.loading = 'lazy';
+      image.src = projectUrl + '/storage/v1/object/public/lasfadan-gallery-photos/' +
+        parts.map(encodeURIComponent).join('/');
+      const caption = document.createElement('div');
+      caption.className = 'g-tile-caption';
+      caption.textContent = photo.caption;
+      tile.append(image, caption);
+      tiles.push(tile);
     }
-  }catch(e){
-    galleryCache = SITE_CONTENT.seedGallery.slice();
-  }
-  renderGallery();
-}
-
-async function persistGallery(){
-  return writeStoredJSON(GALLERY_KEY, galleryCache);
-}
-
-function galleryTileHTML(item, showActions){
-  const actions = showActions ? `
-    <div class="g-tile-actions">
-      <button data-gallery-edit="${item.id}">Edit</button>
-      <button data-gallery-delete="${item.id}">Delete</button>
-    </div>` : '';
-  return `
-    <div class="g-tile">
-      ${actions}
-      <img src="${item.src}" alt="${item.title || 'Gallery image'}">
-      <div class="g-tile-caption">${item.title || 'Gallery image'}</div>
-    </div>`;
-}
-
-function renderGallery(){
-  const homeEl = document.getElementById('galleryGridHome');
-  if(homeEl){
-    const preview = galleryCache.slice(0, 6);
-    homeEl.innerHTML = preview.length
-      ? preview.map(item => galleryTileHTML(item, false)).join('')
-      : '<p class="events-empty">No gallery images yet. Add one from the admin panel.</p>';
-  }
-
-  const fullEl = document.getElementById('galleryGridFull');
-  if(fullEl){
-    fullEl.innerHTML = galleryCache.length
-      ? galleryCache.map(item => galleryTileHTML(item, isAdmin)).join('')
-      : '<p class="events-empty">No gallery images yet. Add one from the admin panel.</p>';
-
-    fullEl.querySelectorAll('[data-gallery-edit]').forEach(btn => btn.addEventListener('click', ()=>startGalleryEdit(btn.dataset.galleryEdit)));
-    fullEl.querySelectorAll('[data-gallery-delete]').forEach(btn => btn.addEventListener('click', ()=>deleteGallery(btn.dataset.galleryDelete)));
+    full.replaceChildren(...tiles);
+    home.replaceChildren(...tiles.slice(0, 6).map(tile => tile.cloneNode(true)));
+    if (!tiles.length) home.textContent = full.textContent = 'No gallery photos have been published yet.';
+  } catch (error) {
+    console.error('Unable to load gallery:', error);
+    home.textContent = full.textContent = 'Unable to load the gallery. Please try again later.';
   }
 }
 
@@ -693,7 +637,7 @@ document.getElementById('galleryViewAll').addEventListener('click', ()=>goTo('ga
 document.getElementById('newsViewAll').addEventListener('click', ()=>goTo('news'));
 
 /* =========================================================
-   EVENTS — published records read from Supabase; storage helpers below serve the gallery
+   EVENTS — published records read from Supabase
    ========================================================= */
 function fmtDate(iso){
   const d = new Date(iso + 'T00:00:00');
@@ -705,30 +649,6 @@ function fmtDate(iso){
 function todayISO(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-
-function readStoredJSON(key, fallback){
-  try{
-    if(window.storage && typeof window.storage.get === 'function'){
-      return window.storage.get(key, true).then(result => result && result.value ? JSON.parse(result.value) : fallback);
-    }
-    const raw = localStorage.getItem(key);
-    return Promise.resolve(raw ? JSON.parse(raw) : fallback);
-  }catch(e){
-    return Promise.resolve(fallback);
-  }
-}
-
-function writeStoredJSON(key, value){
-  try{
-    if(window.storage && typeof window.storage.set === 'function'){
-      return window.storage.set(key, JSON.stringify(value), true).then(res => !!res).catch(()=>false);
-    }
-    localStorage.setItem(key, JSON.stringify(value));
-    return Promise.resolve(true);
-  }catch(e){
-    return Promise.resolve(false);
-  }
 }
 
 async function loadEvents(){
@@ -793,93 +713,6 @@ function renderEvents(){
     }
     fullEl.innerHTML = html;
   }
-}
-
-/* ---------- Admin: passcode gate ---------- */
-const passOverlay = document.getElementById('passcodeOverlay');
-const passInput = document.getElementById('passcodeInput');
-const passError = document.getElementById('passcodeError');
-const galleryAdminPanel = document.getElementById('galleryAdminPanel');
-
-document.getElementById('manageGalleryBtn').addEventListener('click', ()=>{
-  if(isAdmin){ galleryAdminPanel.style.display = 'block'; return; }
-  passError.style.display = 'none';
-  passInput.value = '';
-  passOverlay.classList.add('open');
-  passInput.focus();
-});
-document.getElementById('passcodeCancel').addEventListener('click', ()=> passOverlay.classList.remove('open'));
-document.getElementById('passcodeSubmit').addEventListener('click', tryUnlock);
-passInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
-function tryUnlock(){
-  if(passInput.value === ADMIN_PASSCODE){
-    isAdmin = true;
-    passOverlay.classList.remove('open');
-    galleryAdminPanel.style.display = 'block';
-    renderGallery();
-  } else {
-    passError.style.display = 'block';
-  }
-}
-/* ---------- Gallery management ---------- */
-let editingGalleryId = null;
-const galleryStatus = document.getElementById('galleryStatus');
-const gTitle = document.getElementById('gTitle');
-const gSrc = document.getElementById('gSrc');
-
-function clearGalleryForm(){
-  editingGalleryId = null;
-  gTitle.value=''; gSrc.value='';
-  document.getElementById('galleryFormTitle').textContent = 'Add a gallery image';
-  document.getElementById('cancelGalleryEditBtn').style.display = 'none';
-  galleryStatus.textContent = '';
-}
-
-function startGalleryEdit(id){
-  const item = galleryCache.find(g=>g.id===id);
-  if(!item) return;
-  editingGalleryId = id;
-  gTitle.value = item.title || '';
-  gSrc.value = item.src || '';
-  document.getElementById('galleryFormTitle').textContent = 'Edit gallery image';
-  document.getElementById('cancelGalleryEditBtn').style.display = 'inline-flex';
-  galleryAdminPanel.scrollIntoView({behavior:'smooth', block:'center'});
-}
-
-document.getElementById('cancelGalleryEditBtn').addEventListener('click', clearGalleryForm);
-
-document.getElementById('saveGalleryBtn').addEventListener('click', async ()=>{
-  if(!gSrc.value){
-    galleryStatus.textContent = 'Add an image path or URL first.';
-    galleryStatus.style.color = '#7c2027';
-    return;
-  }
-  galleryStatus.style.color = 'var(--gold-deep)';
-  galleryStatus.textContent = 'Saving\u2026';
-
-  if(editingGalleryId){
-    const idx = galleryCache.findIndex(g=>g.id===editingGalleryId);
-    if(idx > -1){
-      galleryCache[idx] = {...galleryCache[idx], title:gTitle.value || 'Gallery image', src:gSrc.value};
-    }
-  } else {
-    galleryCache.push({
-      id: 'g' + Date.now(),
-      title: gTitle.value || 'Gallery image',
-      src: gSrc.value
-    });
-  }
-
-  const ok = await persistGallery();
-  galleryStatus.textContent = ok ? 'Saved.' : "Couldn't save just now \u2014 your change is visible here but may not persist. Try again.";
-  clearGalleryForm();
-  renderGallery();
-});
-
-async function deleteGallery(id){
-  galleryCache = galleryCache.filter(g=>g.id!==id);
-  await persistGallery();
-  renderGallery();
 }
 
 loadEvents();
