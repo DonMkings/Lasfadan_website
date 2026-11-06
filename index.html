@@ -400,11 +400,6 @@ const SITE_CONTENT = {
     {icon:'hands', title:'Mentorship Programmes', body:'Pairing experienced tailors and designers with newer members and apprentices to pass on skill and business know-how.'},
     {icon:'megaphone', title:'Advocacy & Representation', body:'Speaking for our members before government and industry bodies on policy, welfare, and the business environment for fashion in Lagos State.'}
   ],
-  news:[
-    {tag:'Partnership', title:'LASTFADAN partners with the Ministry of Wealth Creation', body:'A new arrangement will bring subsidised training slots to registered members across Lagos State in the coming year.'},
-    {tag:'Community', title:'Members shine at this year\u2019s Lagos Fashion Week', body:'Several LASTFADAN designers showed collections on the runway, drawing strong interest from buyers and press.'},
-    {tag:'Membership', title:'Registration now open for the new membership year', body:'Renewals and new applications are open. Visit the secretariat or contact us to complete your registration.'}
-  ],
   executives:[
     {role:'President'},
     {role:'Vice President'},
@@ -526,11 +521,40 @@ const VALUES = [
 ];
 document.getElementById('valuesGrid').innerHTML = VALUES.map(pillarCard).join('');
 
-function newsCard(n){
-  return `<div class="news-card"><span class="eyebrow">${n.tag}</span><h3>${n.title}</h3><p>${n.body}</p></div>`;
+async function loadNews(){
+  const grids = ['newsGridHome', 'newsGridFull'].map(id => document.getElementById(id));
+  grids.forEach(grid => { grid.textContent = 'Loading news…'; });
+  try {
+    const response = await fetch(
+      'https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_news?select=tag,title,body&published=eq.true&order=display_order.asc,id.asc',
+      { headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' }, cache: 'no-store' }
+    );
+    if (!response.ok) throw new Error('News request failed: ' + response.status);
+    const articles = await response.json();
+    if (!Array.isArray(articles)) throw new Error('Unexpected news response');
+    for (const grid of grids) {
+      grid.replaceChildren();
+      for (const article of articles) {
+        const card = document.createElement('div');
+        card.className = 'news-card';
+        const tag = document.createElement('span');
+        tag.className = 'eyebrow';
+        tag.textContent = article.tag;
+        const title = document.createElement('h3');
+        title.textContent = article.title;
+        const body = document.createElement('p');
+        body.textContent = article.body;
+        card.append(tag, title, body);
+        grid.append(card);
+      }
+      if (!articles.length) grid.textContent = 'No news has been published yet.';
+    }
+  } catch (error) {
+    console.error('Unable to load news:', error);
+    grids.forEach(grid => { grid.textContent = 'Unable to load news. Please try again later.'; });
+  }
 }
-document.getElementById('newsGridHome').innerHTML = SITE_CONTENT.news.map(newsCard).join('');
-document.getElementById('newsGridFull').innerHTML = SITE_CONTENT.news.map(newsCard).join('');
+loadNews();
 
 async function loadExecutives(){
   const grid = document.getElementById('execGrid');
