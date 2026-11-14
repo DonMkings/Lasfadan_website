@@ -337,3 +337,29 @@
   @media (max-width:520px){#galleryGridFull{grid-template-columns:minmax(0,1fr);}}
 
   .news-photo{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:16px;}
+
+  /* ---------- Branch Directory ---------- */
+  .branch-list{
+    display:grid;grid-template-columns:minmax(0,1fr);gap:14px;
+    list-style:none;padding:0;margin:0;
+  }
+  .branch-list > li{min-width:0;}
+  .branch-list details{
+    background:var(--bone-2);border:1px solid var(--line-on-light);
+    border-radius:var(--radius);overflow-wrap:anywhere;
+  }
+  .branch-list summary{
+    padding:18px 20px;cursor:pointer;font-weight:600;
+  }
+  .branch-list summary:hover{background:var(--bone);}
+  .branch-list summary:focus-visible{
+    outline:2px solid var(--gold-deep);outline-offset:-3px;
+  }
+  .branch-list details[open] > summary{border-bottom:1px solid var(--line-on-light);}
+  .branch-list details > p{
+    margin:16px 20px;white-space:pre-line;
+  }
+  @media (max-width:640px){
+    .branch-list summary{padding:16px;}
+    .branch-list details > p{margin:16px;}
+  }
