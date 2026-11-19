@@ -228,10 +228,10 @@
 
   /* ---------- What we do ---------- */
   .pillars-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line-on-light);border:1px solid var(--line-on-light);}
-  .pillar{min-width:0;overflow-wrap:anywhere;background:var(--bone);padding:34px 26px;}
+  .pillar{min-width:0;overflow-wrap:anywhere;background:var(--bone);color:var(--ink);padding:34px 26px;}
   .pillar .icn{width:38px;height:38px;margin-bottom:22px;}
   .pillar h3{font-size:19px;margin-bottom:12px;}
-  .pillar p{font-size:14px;color:var(--gold-deep);opacity:0.9;}
+  .pillar p{font-size:14px;color:var(--ink-3);}
   @media (max-width:900px){.pillars-grid{grid-template-columns:1fr 1fr;}}
   @media (max-width:560px){.pillars-grid{grid-template-columns:1fr;}}
 
