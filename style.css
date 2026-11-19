@@ -414,3 +414,12 @@
     .brand-sub { font-size:9px; }
     .footer-cols { gap:32px; }
   }
+
+  /* Keep section spacing proportional on phones. */
+  @media (max-width:640px) {
+    section.block { padding:40px 0; }
+    .page > section.block:first-child { padding-top:32px; }
+    .section-head { margin-bottom:28px; }
+    .section-foot { margin-top:28px; }
+    .contact-grid { gap:28px; }
+  }
