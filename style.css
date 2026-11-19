@@ -50,6 +50,17 @@
   /* ---------- Reveal on scroll ---------- */
   .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease, transform .7s ease;}
   .reveal.is-visible{opacity:1;transform:translateY(0);}
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal-from-left, .reveal-from-right {
+      transition-duration: 250ms;
+    }
+    .reveal-from-left:not(.is-visible) { transform: translateX(-14px); }
+    .reveal-from-right:not(.is-visible) { transform: translateX(14px); }
+
+    @media (max-width: 760px) {
+      .reveal-from-right:not(.is-visible) { transform: translateX(-14px); }
+    }
+  }
   @media (prefers-reduced-motion:reduce){
     .reveal{opacity:1;transform:none;transition:none;}
     html{scroll-behavior:auto;}

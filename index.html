@@ -104,7 +104,7 @@
         <h2>Moments from the guild</h2>
         <p>A running record of our workshops, shows, and gatherings.</p>
       </div>
-      <div class="gallery-grid reveal" id="galleryGridHome"></div>
+      <div class="gallery-grid reveal reveal-from-left" id="galleryGridHome"></div>
       <div class="section-foot">
         <button class="btn-line" id="galleryViewAll">View full gallery &rarr;</button>
       </div>
@@ -118,7 +118,7 @@
         <span class="eyebrow">Latest News</span>
         <h2>From the secretariat</h2>
       </div>
-      <div class="news-grid reveal" id="newsGridHome"></div>
+      <div class="news-grid reveal reveal-from-right" id="newsGridHome"></div>
       <div class="section-foot">
         <button class="btn-line" id="newsViewAll">Read all news &rarr;</button>
       </div>
@@ -484,8 +484,9 @@ function goTo(pageId){
 let revealObserver;
 function initReveal(){
   document.querySelectorAll('.page.active .reveal').forEach(el=>{
-    if(!revealObserver) return;
-    revealObserver.observe(el);
+    if (el.classList.contains('is-visible')) return;
+    if (revealObserver) revealObserver.observe(el);
+    else el.classList.add('is-visible');
   });
 }
 if('IntersectionObserver' in window){
