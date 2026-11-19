@@ -169,7 +169,22 @@
   .btn-ghost-dark:hover{border-color:var(--gold);color:var(--gold-2);}
   .btn-ghost-light{border-color:var(--line-on-light);color:var(--ink);}
   .btn-ghost-light:hover{border-color:var(--gold-deep);color:var(--gold-deep);}
-  .btn-line{border-bottom:1px solid var(--gold-deep);padding:2px 0;font-size:13px;font-weight:600;letter-spacing:0.03em;}
+  .btn-line {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+    min-height: 44px;
+    padding: 6px 0;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+  .hero .btn-line, .block--ink .btn-line { color: var(--gold-2); }
+  .btn-line:hover { text-decoration-thickness: 2px; }
+  .btn-line:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 
   /* ---------- Section shells ---------- */
   section.block{padding:88px 0;}
