@@ -216,8 +216,15 @@
   .about-crest .num{font-family:'Fraunces',serif;font-size:34px;color:var(--gold-deep);}
   .about-crest .lbl{font-size:11.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink);opacity:0.65;margin-top:4px;}
   .about-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-on-light);margin-top:24px;border:1px solid var(--line-on-light);}
-  .about-stats div{background:var(--bone-2);padding:18px;text-align:center;}
-  @media (max-width:860px){.about-grid{grid-template-columns:1fr;gap:36px;}}
+  .about-stats > div{background:var(--bone-2);padding:18px;text-align:center;}
+  @media (max-width:860px){
+    .about-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  }
+  @media (max-width:480px){
+    .about-crest { padding: 20px 14px; }
+    .about-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .about-stats > div { padding: 12px 6px; overflow-wrap: anywhere; }
+  }
 
   /* ---------- What we do ---------- */
   .pillars-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-on-light);border:1px solid var(--line-on-light);}
