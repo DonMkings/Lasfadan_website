@@ -423,19 +423,3 @@
     .section-foot { margin-top:28px; }
     .contact-grid { gap:28px; }
   }
-
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes hero-enter {
-    from { opacity: .75; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .hero-inner > * {
-    animation: hero-enter 360ms ease-out backwards;
-  }
-
-  .hero-inner > h1 { animation-delay: 40ms; }
-  .hero-mission { animation-delay: 80ms; }
-  .hero-pillars { animation-delay: 100ms; }
-  .hero-ctas { animation-delay: 120ms; }
-}
