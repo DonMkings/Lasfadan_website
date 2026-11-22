@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Branch profile · LASFADAN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="block">
+    <a href="./">LASFADAN home</a>
+    <h1 id="name">Branch profile</h1>
+    <p id="status" role="status">Loading branch…</p>
+    <p id="description"></p>
+    <p id="contact"></p>
+    <noscript>Enable JavaScript to view branch details.</noscript>
+  </main>
+  <script type="module">
+    const slug = new URLSearchParams(location.search).get('slug')?.trim();
+    const status = document.getElementById('status');
+    async function showBranch() {
+      if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(slug)) {
+        status.textContent = 'Branch unavailable.';
+        return;
+      }
+      const url = new URL('https://qardzqrsjfwfsmueuctg.supabase.co/rest/v1/lasfadan_branches');
+      url.search = new URLSearchParams({
+        select: 'name,lga,description,public_contact',
+        slug: 'ilike.' + slug,
+        published: 'eq.true',
+        limit: '2'
+      });
+      try {
+        const response = await fetch(url, {
+          headers: { apikey: 'sb_publishable_uveYwnCX_vLtVoYEqgy8YA_xevHGBxc' },
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('Branch request failed');
+        const rows = await response.json();
+        if (rows.length !== 1) {
+          status.textContent = 'Branch unavailable.';
+          return;
+        }
+        const branch = rows[0];
+        document.title = branch.name + ' · LASFADAN';
+        document.getElementById('name').textContent = branch.name;
+        status.textContent = branch.lga ? 'Local government area: ' + branch.lga : '';
+        document.getElementById('description').textContent = branch.description || '';
+        document.getElementById('contact').textContent = branch.public_contact ? 'Branch contact: ' + branch.public_contact : '';
+      } catch {
+        status.textContent = 'Could not load this branch. Please refresh to try again.';
+      }
+    }
+    showBranch();
+  </script>
+</body>
+</html>
